@@ -1,0 +1,18 @@
+{
+  "camera": "com.apple.avfoundation.avcapturedevice.built-in_video:0",
+  "width": 1920,
+  "height": 1080,
+  "fps": 30,
+  "codec": "hevc",
+  "bitrate": 12000000,
+  "zoom": 2.5,
+  "torch": true,
+  "stabilization": true,
+  "mirror": false,
+  "thermal": "fair",
+  "battery": 0.82,
+  "charging": true,
+  "audio": true,
+  "micPermission": "granted",
+  "cameraPaused": "inUse"
+}

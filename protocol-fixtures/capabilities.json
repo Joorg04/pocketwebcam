@@ -1,0 +1,31 @@
+{
+  "cameras": [
+    {
+      "id": "com.apple.avfoundation.avcapturedevice.built-in_video:0",
+      "name": "Wide",
+      "position": "back",
+      "lens": "wide",
+      "zoom": { "min": 1.0, "max": 10.0 },
+      "formats": [
+        { "width": 3840, "height": 2160, "fps": [24, 25, 30, 60] },
+        { "width": 1920, "height": 1080, "fps": [24, 25, 30, 60, 120, 240] },
+        { "width": 1280, "height": 720, "fps": [24, 25, 30, 60, 120, 240] }
+      ],
+      "features": ["torch", "stabilization", "focusLock", "exposureLock"]
+    },
+    {
+      "id": "com.apple.avfoundation.avcapturedevice.built-in_video:1",
+      "name": "Front",
+      "position": "front",
+      "lens": "trueDepth",
+      "zoom": { "min": 1.0, "max": 5.0 },
+      "formats": [
+        { "width": 1920, "height": 1080, "fps": [24, 25, 30, 60] }
+      ],
+      "features": ["stabilization"]
+    }
+  ],
+  "codecs": ["h264", "hevc"],
+  "bitrate": { "min": 1000000, "max": 50000000 },
+  "audio": { "codecs": ["pcm_s16le"], "sampleRates": [48000], "channels": [1] }
+}

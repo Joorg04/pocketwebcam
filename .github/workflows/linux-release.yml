@@ -1,0 +1,153 @@
+# Builds the Linux release files when a version tag (v0.2.0, ...) is pushed:
+#   pocketwebcam-linux-x86_64-<version>.tar.gz   tarball with install.sh (any distro)
+#   pocketwebcam_<version>_amd64.deb             Ubuntu / Debian
+#   pocketwebcam-<version>-1.x86_64.rpm          Fedora (needs RPM Fusion)
+#   SHA256SUMS
+# and checks that the AUR PKGBUILD builds from that tarball. The files go to the tag's draft
+# GitHub release (nothing public until you publish it), then upload them yourself
+# (docs/LINUX_PACKAGING.md):
+#   gh release download -R Joorg04/pocketwebcam v<version>
+name: Linux release
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write  # for the draft release on version tags
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # glibc 2.35, so the binaries run on Ubuntu 22.04, Debian 12, Fedora 36 and newer.
+    container: ubuntu:22.04
+    timeout-minutes: 60
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Install build tools
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends ca-certificates curl git build-essential pkg-config \
+            binutils file rpm shellcheck libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
+
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Check the version
+        id: version
+        working-directory: receiver
+        run: |
+          version=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
+          if [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "Tag $GITHUB_REF_NAME doesn't match receiver/Cargo.toml version $version" >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      # Reports only, for now: these scripts haven't been through shellcheck yet.
+      - name: Check the scripts
+        continue-on-error: true
+        working-directory: receiver
+        run: |
+          shellcheck scripts/package-linux.sh scripts/package-linux-distro.sh scripts/setup-v4l2loopback.sh \
+            packaging/linux/install.sh packaging/linux/uninstall.sh packaging/aur/update-aur.sh
+
+      - name: Test
+        working-directory: receiver
+        run: cargo test --locked
+
+      - name: Build the tarball
+        working-directory: receiver
+        run: scripts/package-linux.sh
+
+      - name: Build the .deb and .rpm
+        working-directory: receiver
+        run: scripts/package-linux-distro.sh
+
+      - name: Inspect the packages
+        working-directory: receiver/target/dist
+        run: |
+          v=${{ steps.version.outputs.version }}
+          dpkg-deb --info "pocketwebcam_${v}_amd64.deb"
+          dpkg-deb --contents "pocketwebcam_${v}_amd64.deb"
+          rpm -qip "pocketwebcam-$v-1.x86_64.rpm"
+          rpm -qlp --requires "pocketwebcam-$v-1.x86_64.rpm"
+          sha256sum "pocketwebcam-linux-x86_64-$v.tar.gz" "pocketwebcam_${v}_amd64.deb" \
+            "pocketwebcam-$v-1.x86_64.rpm" > SHA256SUMS
+          cat SHA256SUMS
+
+      - uses: actions/upload-artifact@v4
+        continue-on-error: true  # a full artifact quota shouldn't fail the build
+        with:
+          name: pocketwebcam-linux-${{ steps.version.outputs.version }}
+          path: |
+            receiver/target/dist/pocketwebcam-linux-x86_64-${{ steps.version.outputs.version }}.tar.gz
+            receiver/target/dist/pocketwebcam_${{ steps.version.outputs.version }}_amd64.deb
+            receiver/target/dist/pocketwebcam-${{ steps.version.outputs.version }}-1.x86_64.rpm
+            receiver/target/dist/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 7
+
+      # On a version tag the files also go to that version's draft release, which doesn't
+      # count against the artifact quota (the AUR job below reads them from there).
+      - name: Attach to the draft release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          curl -fsSL https://github.com/cli/cli/releases/download/v2.63.2/gh_2.63.2_linux_amd64.tar.gz | tar xz -C /tmp
+          gh=/tmp/gh_2.63.2_linux_amd64/bin/gh
+          tag="$GITHUB_REF_NAME"
+          $gh release view "$tag" >/dev/null 2>&1 || $gh release create "$tag" --draft --title "$tag" --notes "Pocket Webcam $tag"
+          cd receiver/target/dist
+          v=${{ steps.version.outputs.version }}
+          $gh release upload "$tag" --clobber \
+            "pocketwebcam-linux-x86_64-$v.tar.gz" "pocketwebcam_${v}_amd64.deb" "pocketwebcam-$v-1.x86_64.rpm" SHA256SUMS
+
+  # Builds the AUR package from the tarball above, as the AUR will once it's uploaded.
+  aur:
+    needs: build
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    timeout-minutes: 20
+    steps:
+      - name: Install makepkg and namcap
+        run: pacman -Syu --noconfirm --needed base-devel namcap
+
+      - uses: actions/checkout@v4
+
+      - name: Get the tarball from the draft release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          pacman -S --noconfirm --needed github-cli
+          gh release download "$GITHUB_REF_NAME" -p "pocketwebcam-linux-x86_64-*.tar.gz" -D dist
+
+      - uses: actions/download-artifact@v4
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        with:
+          name: pocketwebcam-linux-${{ needs.build.outputs.version }}
+          path: dist
+
+      # makepkg refuses to run as root.
+      - name: Build the package
+        run: |
+          v=${{ needs.build.outputs.version }}
+          useradd -m builder
+          chown -R builder .
+          cp "dist/pocketwebcam-linux-x86_64-$v.tar.gz" receiver/packaging/aur/pocketwebcam-bin/
+          cd receiver/packaging/aur
+          su builder -c "./update-aur.sh pocketwebcam-bin/pocketwebcam-linux-x86_64-$v.tar.gz"
+          cd pocketwebcam-bin
+          # -d: the dependencies (GStreamer, v4l2loopback) aren't needed to package prebuilt files.
+          su builder -c "makepkg -d --noconfirm"
+          namcap PKGBUILD
+          namcap pocketwebcam-bin-*.pkg.tar.zst

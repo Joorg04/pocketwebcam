@@ -1,0 +1,230 @@
+# Builds the Windows desktop app on a GitHub Windows runner and packs it as a zip with
+# GStreamer bundled (no separate install needed):
+#   PocketWebcam-windows-x86_64 -> unzip anywhere, run pocketwebcam-app.exe
+# and as an installer (receiver/packaging/windows/pocketwebcam.iss):
+#   PocketWebcam-Setup -> PocketWebcam-Setup-<version>.exe
+# Download the latest one:
+#   gh run download -R Joorg04/pocketwebcam -n PocketWebcam-Setup
+# See docs/WINDOWS_PLAN.md.
+name: Windows build
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]  # also attaches the installer to that version's draft release
+    branches: [master]
+    paths:
+      - "receiver/**"
+      - "brand/**"
+      - ".github/workflows/windows-build.yml"
+
+permissions:
+  contents: write  # for the draft release on version tags
+
+env:
+  GST_VERSION: 1.28.8
+  GST_DIR: C:\gstreamer\1.0\msvc_x86_64
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache GStreamer
+        id: gst-cache
+        uses: actions/cache@v4
+        with:
+          path: C:\gstreamer
+          key: gstreamer-msvc-x86_64-${{ env.GST_VERSION }}
+
+      - name: Install GStreamer
+        if: steps.gst-cache.outputs.cache-hit != 'true'
+        run: |
+          $url = "https://gstreamer.freedesktop.org/data/pkg/windows/$env:GST_VERSION/msvc/gstreamer-1.0-msvc-x86_64-$env:GST_VERSION.exe"
+          Invoke-WebRequest $url -OutFile gstreamer-setup.exe
+          Start-Process -Wait -FilePath .\gstreamer-setup.exe -ArgumentList `
+            "/VERYSILENT", "/NORESTART", "/SUPPRESSMSGBOXES", "/ALLUSERS", "/TYPE=devel", "/DIR=$env:GST_DIR"
+          if (-not (Test-Path "$env:GST_DIR\lib\pkgconfig\gstreamer-1.0.pc")) {
+            Get-ChildItem C:\gstreamer -Recurse -Depth 3 | Select-Object -First 40 FullName
+            throw "GStreamer did not install where expected"
+          }
+
+      - name: Set up GStreamer for the build
+        run: |
+          choco install pkgconfiglite -y --no-progress
+          "PKG_CONFIG_PATH=$env:GST_DIR\lib\pkgconfig" >> $env:GITHUB_ENV
+          "$env:GST_DIR\bin" >> $env:GITHUB_PATH
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: receiver
+
+      - name: Install cargo-about
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-about@0.9.3
+
+      # The app shows this file and the installer ships it, so it must list today's libraries.
+      - name: Third-party notices are up to date
+        shell: bash
+        working-directory: receiver
+        run: |
+          scripts/third-party-notices.sh
+          git diff --exit-code -- packaging/THIRD-PARTY-NOTICES.txt ||
+            { echo "::error::packaging/THIRD-PARTY-NOTICES.txt is out of date: run receiver/scripts/third-party-notices.sh and commit it"; exit 1; }
+
+      - name: Clippy
+        working-directory: receiver
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Test
+        working-directory: receiver
+        run: cargo test --workspace
+
+      - name: Build
+        working-directory: receiver
+        run: cargo build --release --workspace
+
+      - name: Package
+        run: |
+          $out = "dist\PocketWebcam"
+          New-Item -ItemType Directory -Force "$out\gstreamer\plugins" | Out-Null
+          Copy-Item receiver\target\release\pocketwebcam-app.exe, receiver\target\release\pocketwebcam.exe $out
+          Copy-Item receiver\target\release\pocketwebcam_camera.dll $out
+          Copy-Item receiver\packaging\windows\install-camera.cmd, receiver\packaging\windows\uninstall-camera.cmd $out
+          # Only the plugins the app uses (see plugins.txt): first start scans every bundled plugin.
+          $plugins = Get-Content receiver\packaging\windows\plugins.txt |
+            Where-Object { $_ -match '^\s*[^#\s]' } | ForEach-Object { ($_ -split '\s+')[0] }
+          foreach ($p in $plugins) { Copy-Item "$env:GST_DIR\lib\gstreamer-1.0\$p.dll" "$out\gstreamer\plugins" -ErrorAction Stop }
+          $scanner = Get-ChildItem $env:GST_DIR -Recurse -Filter gst-plugin-scanner.exe | Select-Object -First 1
+          if (-not $scanner) { throw "gst-plugin-scanner.exe not found" }
+          Copy-Item $scanner.FullName $out
+          # GStreamer's libraries: only the ones that something we ship imports, followed
+          # recursively (GStreamer's bin folder has ~100, including GPL ones like x264 and
+          # libdvdread that we must not ship). Windows' own DLLs aren't in that folder.
+          $dumpbin = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * `
+            -find 'VC\Tools\MSVC\**\bin\Hostx64\x64\dumpbin.exe' | Select-Object -First 1
+          if (-not $dumpbin) { throw "dumpbin.exe not found" }
+          $queue = [System.Collections.Generic.Queue[string]]::new()
+          Get-ChildItem $out -Recurse -Include *.exe, *.dll | ForEach-Object { $queue.Enqueue($_.FullName) }
+          $copied = @{}
+          while ($queue.Count) {
+            $file = $queue.Dequeue()
+            $deps = & $dumpbin /nologo /dependents $file
+            if ($LASTEXITCODE -ne 0) { throw "dumpbin failed on $file" }
+            foreach ($line in $deps) {
+              if ($line -notmatch '^\s+(\S+\.dll)\s*$') { continue }
+              $name = $Matches[1]
+              $src = Join-Path "$env:GST_DIR\bin" $name
+              if ($copied.ContainsKey($name.ToLower()) -or -not (Test-Path $src)) { continue }
+              $copied[$name.ToLower()] = $true
+              Copy-Item $src $out
+              $queue.Enqueue($src)
+            }
+          }
+          "GStreamer libraries bundled: $($copied.Count)"
+          # Known GPL libraries (from GStreamer's share\licenses): shipping one would mean
+          # offering its source under the GPL. None is needed; fail if one ever sneaks in.
+          $gpl = Get-ChildItem $out -Recurse -Filter *.dll |
+            Where-Object { $_.Name -match '^(lib)?(a52|dca|dvdnav|dvdread|x264|x265|mpeg2|postproc|xvid|faad)' }
+          if ($gpl) { throw "GPL libraries would ship: $($gpl.Name -join ', ')" }
+          Copy-Item receiver\packaging\windows\README.txt $out
+          # Licenses: ours, everyone else's (THIRD-PARTY-NOTICES.txt), and the license files
+          # GStreamer ships for itself and the libraries in its bin folder.
+          New-Item -ItemType Directory -Force "$out\licenses\gstreamer" | Out-Null
+          Copy-Item LICENSE, receiver\packaging\THIRD-PARTY-NOTICES.txt "$out\licenses"
+          $gstLicenses = Get-ChildItem $env:GST_DIR -Recurse -File | Where-Object {
+            $_.FullName -match '\\licen[cs]es?\\' -or $_.Name -match '^(COPYING|LICEN[CS]E)'
+          }
+          if (-not $gstLicenses) { throw "no license files found in $env:GST_DIR" }
+          foreach ($f in $gstLicenses) {
+            $rel = $f.FullName.Substring($env:GST_DIR.Length + 1)
+            $dest = Join-Path "$out\licenses\gstreamer" $rel
+            New-Item -ItemType Directory -Force (Split-Path $dest) | Out-Null
+            Copy-Item $f.FullName $dest
+          }
+          "Bundled DLLs:"
+          Get-ChildItem $out -Filter *.dll | ForEach-Object { "  " + $_.Name }
+          "{0:N0} MB" -f ((Get-ChildItem dist -Recurse | Measure-Object Length -Sum).Sum / 1MB)
+
+      - name: Check bundled plugins
+        # Loads the packaged plugins only (fresh registry, the bundled scanner), the way the app
+        # does, and fails if an element from plugins.txt is missing.
+        run: |
+          $out = "$pwd\dist\PocketWebcam"
+          $env:GST_PLUGIN_SYSTEM_PATH_1_0 = "$out\gstreamer\plugins"
+          $env:GST_PLUGIN_SCANNER_1_0 = "$out\gst-plugin-scanner.exe"
+          $env:GST_REGISTRY_1_0 = "$env:RUNNER_TEMP\check-registry.bin"
+          # GStreamer's own bin folder off the PATH, so the bundled scanner can only load the
+          # libraries we ship: a plugin whose library was left out fails to load here.
+          $env:PATH = "$env:SystemRoot\system32;$env:SystemRoot;$env:SystemRoot\System32\WindowsPowerShell\v1.0"
+          $elements = Get-Content receiver\packaging\windows\plugins.txt |
+            Where-Object { $_ -match '^\s*[^#\s]' } | ForEach-Object { ($_ -split '\s+') | Select-Object -Skip 1 } |
+            Where-Object { $_ -and -not $_.EndsWith('?') }  # "?" = needs a GPU, which runners lack
+          $time = Measure-Command { & "$env:GST_DIR\bin\gst-inspect-1.0.exe" coreelements | Out-Null }
+          "Plugin scan: {0:N1} s" -f $time.TotalSeconds
+          $missing = $elements | Where-Object { & "$env:GST_DIR\bin\gst-inspect-1.0.exe" --exists $_; $LASTEXITCODE -ne 0 }
+          if ($missing) { throw "missing from the bundled plugins: $($missing -join ', ')" }
+          "All $($elements.Count) elements found"
+
+      - name: Installer
+        run: |
+          $version = (Select-String -Path receiver\Cargo.toml -Pattern '^version = "(.+)"' | Select-Object -First 1).Matches[0].Groups[1].Value
+          $iscc = Get-Command iscc -ErrorAction SilentlyContinue
+          if (-not $iscc) {
+            choco install innosetup -y --no-progress
+            $iscc = Get-Command "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          }
+          & $iscc.Source /Q "/O$pwd\installer" "/DAppVersion=$version" "/DDistDir=$pwd\dist\PocketWebcam" receiver\packaging\windows\pocketwebcam.iss
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed" }
+          Get-ChildItem installer | ForEach-Object { "{0}: {1:N0} MB" -f $_.Name, ($_.Length / 1MB) }
+
+      - name: Checksum
+        # SHA256SUMS.txt goes next to the installer (same format as `sha256sum`), so the
+        # download page can say what the file should be and anyone can check their copy:
+        #   Get-FileHash PocketWebcam-Setup-<version>.exe -Algorithm SHA256
+        run: |
+          $lines = Get-ChildItem installer -Filter *.exe | ForEach-Object {
+            "{0}  {1}" -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower(), $_.Name
+          }
+          if (-not $lines) { throw "no installer to checksum" }
+          $lines | Set-Content -Encoding ascii installer\SHA256SUMS.txt
+          Get-Content installer\SHA256SUMS.txt
+
+      - uses: actions/upload-artifact@v4
+        continue-on-error: true  # a full artifact quota shouldn't fail the build
+        with:
+          name: PocketWebcam-windows-x86_64
+          path: dist
+          retention-days: 7
+
+      - uses: actions/upload-artifact@v4
+        continue-on-error: true  # a full artifact quota shouldn't fail the build
+        with:
+          name: PocketWebcam-Setup
+          path: installer
+          retention-days: 7
+
+      # On a version tag, the installer and its checksum go to that version's draft release
+      # (release files don't count against the artifact quota). Copy them to
+      # downloads.pocketwebcam.com from there: docs/WEBSITE.md.
+      - name: Attach to the draft release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release view $env:GITHUB_REF_NAME *> $null
+          if ($LASTEXITCODE -ne 0) { gh release create $env:GITHUB_REF_NAME --draft --title $env:GITHUB_REF_NAME --notes "Pocket Webcam $env:GITHUB_REF_NAME" }
+          $files = @(Get-ChildItem installer -Filter *.exe | ForEach-Object FullName) + "installer\SHA256SUMS.txt"
+          gh release upload $env:GITHUB_REF_NAME @files --clobber
+          if ($LASTEXITCODE -ne 0) { throw "release upload failed" }

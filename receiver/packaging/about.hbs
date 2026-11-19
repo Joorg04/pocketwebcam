@@ -1,0 +1,16 @@
+================================================================================
+4. Rust libraries
+================================================================================
+
+Pocket Webcam's desktop app is written in Rust and includes these libraries. Each
+license below is followed by its full text. Source code for every library is on
+crates.io under its name and version.
+{{#each licenses}}
+--------------------------------------------------------------------------------
+{{{name}}} ({{{id}}})
+
+Used by:
+{{#each used_by}}{{#unless (eq crate.name "pocketwebcam-receiver")}}{{#unless (eq crate.name "pocketwebcam-camera")}}  {{crate.name}} {{crate.version}}{{#if crate.repository}}  {{{crate.repository}}}{{/if}}
+{{/unless}}{{/unless}}{{/each}}
+{{{text}}}
+{{/each}}

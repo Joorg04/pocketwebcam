@@ -1,0 +1,39 @@
+{
+  "comment": "Whole messages: 1 byte type, 4 bytes big-endian payload length, payload. Spaces in the hex are only for reading.",
+  "messages": [
+    {
+      "name": "VIDEO_FRAME, keyframe",
+      "hex": "11 0000000e 01 0000000000a0f1b2 0000000165",
+      "type": 17,
+      "video": { "keyframe": true, "ptsMicros": 10547634, "dataHex": "0000000165" }
+    },
+    {
+      "name": "VIDEO_FRAME, not a keyframe",
+      "hex": "11 0000000f 00 00000000ffffffff 000000014199",
+      "type": 17,
+      "video": { "keyframe": false, "ptsMicros": 4294967295, "dataHex": "000000014199" }
+    },
+    {
+      "name": "AUDIO_FRAME, two samples",
+      "hex": "14 0000000c 0000000000000007 0100 ffff",
+      "type": 20,
+      "audio": { "ptsMicros": 7, "samples": [1, -1] }
+    },
+    {
+      "name": "KEYFRAME_REQ, empty payload",
+      "hex": "12 00000000",
+      "type": 18
+    },
+    {
+      "name": "PING",
+      "hex": "20 00000007 7b2274223a317d",
+      "type": 32,
+      "json": { "t": 1 }
+    },
+    {
+      "name": "a message type nobody knows yet: skipped, not an error",
+      "hex": "6a 00000003 010203",
+      "type": 106
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+# Rust
+receiver/target/
+
+# Xcode (the project is generated from ios/project.yml)
+ios/*.xcodeproj/
+ios/PocketWebcam/Resources/Info.plist
+xcuserdata/
+DerivedData/
+*.xcuserstate
+
+# Python
+__pycache__/
+
+# OS
+.DS_Store
+
+# Signing keys never go in the repo
+*.jks
+*.keystore
+*.p12
+*.p8
+*.mobileprovision
+.wrangler/

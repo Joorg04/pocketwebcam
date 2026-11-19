@@ -1,0 +1,25 @@
+# Loads the virtual camera if the driver is already built. On a first install DKMS builds it
+# after this runs, so the camera starts at the next restart instead. A loaded driver is never
+# reloaded here: an app may be using it.
+_start_camera() {
+  if ! grep -q '^v4l2loopback ' /proc/modules 2>/dev/null; then
+    modprobe v4l2loopback 2>/dev/null || true
+  fi
+  if [ ! -e /dev/video10 ]; then
+    echo "Pocket Webcam: the virtual camera starts after the next restart."
+    echo "  To start it now: sudo /usr/share/pocketwebcam/setup-v4l2loopback.sh"
+    echo "  v4l2loopback-dkms needs the headers for your kernel (e.g. linux-headers)."
+  fi
+}
+
+post_install() {
+  _start_camera
+}
+
+post_upgrade() {
+  _start_camera
+}
+
+post_remove() {
+  echo "Pocket Webcam: the virtual camera goes away after the next restart."
+}

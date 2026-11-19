@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Use your iPhone as a webcam on Windows 11 · Pocket Webcam</title>
+  <meta name="description" content="Use your iPhone as a free wireless webcam on Windows 11. Shows up as a normal camera in Zoom, Discord, OBS and browsers. Preview installer, setup steps and answers.">
+  <link rel="canonical" href="https://pocketwebcam.com/windows">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Pocket Webcam">
+  <meta property="og:title" content="Use your iPhone as a webcam on Windows 11 · Pocket Webcam">
+  <meta property="og:description" content="Use your iPhone as a free wireless webcam on Windows 11. Shows up as a normal camera in Zoom, Discord, OBS and browsers. Preview installer, setup steps and answers.">
+  <meta property="og:url" content="https://pocketwebcam.com/windows">
+  <meta property="og:image" content="https://pocketwebcam.com/assets/og-image.png?v=1">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Pocket Webcam: use your iPhone as a webcam on Windows and Linux">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+  <link rel="stylesheet" href="/assets/style.css?v=2">
+  <meta name="theme-color" content="#0b0b0c">
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "Use your iPhone as a webcam on Windows 11 with Pocket Webcam",
+  "step": [
+    {
+      "@type": "HowToStep",
+      "name": "Install the desktop app",
+      "text": "Download the Pocket Webcam installer for Windows 11 and run it. It installs the app and the virtual camera."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Open the apps",
+      "text": "Open Pocket Webcam on your iPhone and on your Windows 11 PC, on the same Wi-Fi network. The PC finds the phone by itself."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Pick the camera",
+      "text": "Press Start virtual camera, then choose Pocket Webcam (Windows Virtual Camera) in your video call, streaming or browser app."
+    }
+  ]
+}</script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Does it work on Windows 10?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. The virtual camera uses a camera API that Windows 11 added, so the installer needs Windows 11. A Windows 10 version may come later."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I use the phone’s microphone on Windows?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Not yet. Windows only accepts a new microphone from a driver that Microsoft has signed, and the signing certificate costs money every year. It’s the next thing donations pay for. Until then, use your computer’s own microphone."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Why does Windows say “Windows protected your PC”?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The preview installer isn’t code-signed yet, so SmartScreen doesn’t know it. Choose More info, then Run anyway. Signing comes with the same certificate as the microphone driver."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Why doesn’t the desktop app find my phone?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The installer allows phone discovery (mDNS, UDP port 5353) on private networks only. If Windows treats your Wi-Fi as a public network, set it to private in Settings → Network & internet, or open “Connect by IP address” in the desktop app and type the address your phone shows. Guest networks often block devices from seeing each other."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Which apps can use the camera?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Apps that use the standard Windows camera list, such as the Camera app, browsers, Zoom, Discord and OBS. It shows up as “Pocket Webcam (Windows Virtual Camera)”. This is a preview, so testing with more apps, including Microsoft Teams, is still going on."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do I uninstall it?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Settings → Apps → Installed apps → Pocket Webcam → Uninstall. That removes the app and the virtual camera. Your settings stay in your user folder."
+      }
+    }
+  ]
+}</script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <nav class="wrap nav" aria-label="Main">
+      <a class="brand" href="/">
+        <img src="/assets/favicon.svg" alt="" width="28" height="28">
+        Pocket Webcam
+      </a>
+      <ul class="nav-links">
+        <li><a href="/#how">How it works</a></li>
+        <li><a href="/#features">Features</a></li>
+        <li><a href="/linux">Linux</a></li>
+        <li><a href="/windows" aria-current="page">Windows</a></li>
+        <li><a href="/help">Help</a></li>
+        <li><a class="btn btn-primary btn-small" href="/download">Download</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main id="main" class="page">
+    <div class="wrap">
+      <div class="page-head">
+        <h1>Use your iPhone as a webcam on Windows 11</h1>
+        <p>Pocket Webcam sends your iPhone’s camera to your Windows PC over Wi-Fi and shows it as a regular webcam: in Zoom, Discord, OBS and your browser. Free, no watermark, no account.</p>
+      </div>
+
+      <div class="prose">
+        <div class="note">
+          <strong>Status: preview.</strong> The Windows app is new and still being tested, so expect rough edges. It needs Windows 11.
+          The phone’s microphone isn’t available on Windows yet (<a href="/donate">why</a>).
+          The iPhone app is in beta on TestFlight: <a href="https://a5cf18de.sibforms.com/serve/MUIFACfRyj2vaDYHV6QjQxAFLVGsnYRZt6BZG5gQFn3MzESW96ZbPanN-FemtnLjsO1nE269SgcIVhveI-wAOhNapaHTtwfVelYA3GJ3zzVdliwTghBJ6Em7ChFukjr2M3U4tcXDVHComMFVcsGTZqnMx27udqN9qcy-cbHYE596_2I4xhN8aulPjZ9oSjZkxdrTvkXet_U9s26GAA==">join the launch list</a> to get an invite.
+        </div>
+
+        <h2 id="how">How it works</h2>
+        <ol>
+          <li>The iPhone app encodes the camera in hardware (H.264 or HEVC) and announces itself on your Wi-Fi.</li>
+          <li>The Windows app finds the phone, decodes the video and sends it to a virtual camera called <strong>Pocket Webcam (Windows Virtual Camera)</strong>, using the virtual camera support built into Windows 11.</li>
+          <li>Any app that lists your webcams can pick it.</li>
+        </ol>
+
+        <h2 id="requirements">What you need</h2>
+        <ul>
+          <li>An iPhone with iOS 17 or later (an Android version comes later)</li>
+          <li>A 64-bit PC with Windows 11</li>
+          <li>Both on the same Wi-Fi network</li>
+        </ul>
+
+        <h2 id="install">Install</h2>
+        <p><a class="btn btn-primary" href="https://downloads.pocketwebcam.com/windows/PocketWebcam-Setup-0.1.0.exe">Download for Windows 11 (47 MB)</a></p>
+        <ol>
+          <li>Run <code>PocketWebcam-Setup-0.1.0.exe</code>. Windows may say “Windows protected your PC” because the preview isn’t signed yet: choose <strong>More info</strong>, then <strong>Run anyway</strong>.</li>
+          <li>Allow the administrator prompt. Setup needs it once, to install the virtual camera and a firewall rule that lets the app find your phone on private networks.</li>
+          <li>Open Pocket Webcam from the Start menu.</li>
+        </ol>
+        <p>To check that the download is complete and unchanged, run this in PowerShell in your Downloads folder. It should print the SHA-256 below.</p>
+        <pre><code>Get-FileHash .\PocketWebcam-Setup-0.1.0.exe</code></pre>
+        <pre><code>0BEE4A32F992F9193745CA66BB99211A2050F26DFF7AE02082FB10008C6D82C9</code></pre>
+
+        <h2 id="connect">Connect your iPhone</h2>
+        <ol>
+          <li>Open Pocket Webcam on the iPhone, on the same Wi-Fi as your PC.</li>
+          <li>Your phone shows up in the desktop app and connects by itself.</li>
+          <li>Press <strong>Start virtual camera</strong>, then choose <strong>Pocket Webcam (Windows Virtual Camera)</strong> in your call, streaming or browser app.</li>
+        </ol>
+        <p>Discovery uses mDNS (UDP 5353) and the video uses TCP port 7310. If your phone doesn’t show up, see the questions below and the <a href="/help">help page</a>.</p>
+
+        <h2 id="faq">Windows questions</h2>
+        <h3>Does it work on Windows 10?</h3>
+        <p>No. The virtual camera uses a camera API that Windows 11 added, so the installer needs Windows 11. A Windows 10 version may come later.</p>
+        <h3>Can I use the phone’s microphone on Windows?</h3>
+        <p>Not yet. Windows only accepts a new microphone from a driver that Microsoft has signed, and the signing certificate costs money every year. It’s the next thing donations pay for. Until then, use your computer’s own microphone.</p>
+        <h3>Why does Windows say “Windows protected your PC”?</h3>
+        <p>The preview installer isn’t code-signed yet, so SmartScreen doesn’t know it. Choose More info, then Run anyway. Signing comes with the same certificate as the microphone driver.</p>
+        <h3>Why doesn’t the desktop app find my phone?</h3>
+        <p>The installer allows phone discovery (mDNS, UDP port 5353) on private networks only. If Windows treats your Wi-Fi as a public network, set it to private in Settings → Network & internet, or open “Connect by IP address” in the desktop app and type the address your phone shows. Guest networks often block devices from seeing each other.</p>
+        <h3>Which apps can use the camera?</h3>
+        <p>Apps that use the standard Windows camera list, such as the Camera app, browsers, Zoom, Discord and OBS. It shows up as “Pocket Webcam (Windows Virtual Camera)”. This is a preview, so testing with more apps, including Microsoft Teams, is still going on.</p>
+        <h3>How do I uninstall it?</h3>
+        <p>Settings → Apps → Installed apps → Pocket Webcam → Uninstall. That removes the app and the virtual camera. Your settings stay in your user folder.</p>
+
+        <h2 id="next">Not on Windows?</h2>
+        <p>There’s a <a href="/linux">Linux setup guide</a>, and an Android version comes after the iPhone launch. Coming from another app? Compare Pocket Webcam with <a href="/vs/camo">Camo</a>, <a href="/vs/epoccam">EpocCam</a> or <a href="/vs/ivcam">iVCam</a>.</p>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <div class="footer-grid">
+        <span>© 2026 Pocket Webcam</span>
+        <ul class="footer-links">
+          <li><a href="/download">Download</a></li>
+          <li><a href="/linux">Linux</a></li>
+          <li><a href="/windows" aria-current="page">Windows</a></li>
+          <li><a href="/help">Help</a></li>
+          <li><a href="/donate">Donate</a></li>
+          <li><a href="/privacy">Privacy</a></li>
+          <li><a href="mailto:hello@pocketwebcam.com">hello@pocketwebcam.com</a></li>
+        </ul>
+      </div>
+      <p class="legal">iPhone is a trademark of Apple Inc., registered in the U.S. and other countries. Android is a trademark of Google LLC. Pocket Webcam is not affiliated with Apple or Google.</p>
+    </div>
+  </footer>
+</body>
+</html>

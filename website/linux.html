@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Use your iPhone as a webcam on Linux · Pocket Webcam</title>
+  <meta name="description" content="Use your iPhone as a free wireless webcam on Linux. Shows up as a V4L2 camera in OBS, Chrome, Firefox and video calls. Setup guide, v4l2loopback, and Secure Boot tips.">
+  <link rel="canonical" href="https://pocketwebcam.com/linux">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Pocket Webcam">
+  <meta property="og:title" content="Use your iPhone as a webcam on Linux · Pocket Webcam">
+  <meta property="og:description" content="Use your iPhone as a free wireless webcam on Linux. Shows up as a V4L2 camera in OBS, Chrome, Firefox and video calls. Setup guide, v4l2loopback, and Secure Boot tips.">
+  <meta property="og:url" content="https://pocketwebcam.com/linux">
+  <meta property="og:image" content="https://pocketwebcam.com/assets/og-image.png?v=1">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Pocket Webcam: use your iPhone as a webcam on Windows and Linux">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+  <link rel="stylesheet" href="/assets/style.css?v=2">
+  <meta name="theme-color" content="#0b0b0c">
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "Use your iPhone as a webcam on Linux with Pocket Webcam",
+  "step": [
+    {
+      "@type": "HowToStep",
+      "name": "Install the virtual camera module",
+      "text": "Install v4l2loopback and GStreamer plugins, then create the Pocket Webcam Camera device with exclusive_caps=1."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Open the apps",
+      "text": "Open Pocket Webcam on your iPhone and the Pocket Webcam desktop app on your Linux computer, on the same Wi-Fi network."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Pick the camera",
+      "text": "Choose Pocket Webcam Camera in OBS, your browser or any video call app."
+    }
+  ]
+}</script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Does it work on Wayland and X11?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. Pocket Webcam creates a V4L2 virtual camera in the kernel, so it doesn’t depend on your display server. It has been tested on Arch Linux with Hyprland (Wayland)."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Do I need v4l2loopback?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. v4l2loopback is the kernel module that creates the virtual webcam your apps see. Pocket Webcam uses a single device named “Pocket Webcam Camera”."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Why doesn’t Chrome or Firefox list the camera?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The device must be created with exclusive_caps=1. Without it, browsers and WebRTC apps can’t see it as a camera. The setup below uses that option."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does it work with Secure Boot?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Only if the v4l2loopback module is signed. DKMS modules are unsigned by default, so on Secure Boot systems you need to enroll a signing key (MOK) or turn Secure Boot off for the module to load."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is video hardware-decoded?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Where VA-API is available, the receiver uses the GPU to decode (vah264dec / vah265dec) and falls back to software decoding when it isn’t."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is there an AUR or Flatpak package?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Not yet. Packages for Arch (AUR) and Flatpak are planned for launch. A Flatpak will still need the v4l2loopback kernel module installed on the host."
+      }
+    }
+  ]
+}</script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <nav class="wrap nav" aria-label="Main">
+      <a class="brand" href="/">
+        <img src="/assets/favicon.svg" alt="" width="28" height="28">
+        Pocket Webcam
+      </a>
+      <ul class="nav-links">
+        <li><a href="/#how">How it works</a></li>
+        <li><a href="/#features">Features</a></li>
+        <li><a href="/linux" aria-current="page">Linux</a></li>
+        <li><a href="/windows">Windows</a></li>
+        <li><a href="/help">Help</a></li>
+        <li><a class="btn btn-primary btn-small" href="/download">Download</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main id="main" class="page">
+    <div class="wrap">
+      <div class="page-head">
+        <h1>Use your iPhone as a webcam on Linux</h1>
+        <p>Pocket Webcam sends your iPhone’s camera to your Linux computer over Wi-Fi and shows it as a regular V4L2 webcam: in OBS, Chrome, Firefox and video calls. Free, no watermark, no account.</p>
+      </div>
+
+      <div class="prose">
+        <div class="note">
+          <strong>Status: in development.</strong> The Linux receiver and the virtual camera work today, tested on Arch Linux with Hyprland.
+          The iPhone app is in beta on TestFlight, and there’s no public Linux download yet.
+          <a href="https://a5cf18de.sibforms.com/serve/MUIFACfRyj2vaDYHV6QjQxAFLVGsnYRZt6BZG5gQFn3MzESW96ZbPanN-FemtnLjsO1nE269SgcIVhveI-wAOhNapaHTtwfVelYA3GJ3zzVdliwTghBJ6Em7ChFukjr2M3U4tcXDVHComMFVcsGTZqnMx27udqN9qcy-cbHYE596_2I4xhN8aulPjZ9oSjZkxdrTvkXet_U9s26GAA==">Join the launch list</a> for a beta invite.
+        </div>
+
+        <h2 id="how">How it works</h2>
+        <ol>
+          <li>The iPhone app encodes the camera in hardware (H.264 or HEVC) and announces itself on your Wi-Fi.</li>
+          <li>The Linux app finds the phone, decodes the video and writes it to a virtual camera called <strong>Pocket Webcam Camera</strong> (<code>/dev/video10</code>).</li>
+          <li>Any app that can use a V4L2 webcam can pick it.</li>
+        </ol>
+
+        <h2 id="requirements">What you need</h2>
+        <ul>
+          <li>An iPhone with iOS 17 or later (an Android version comes later)</li>
+          <li>A Linux computer on the same Wi-Fi network as the phone</li>
+          <li>The <code>v4l2loopback</code> kernel module and the GStreamer plugins</li>
+        </ul>
+
+        <h2 id="setup">Set up the virtual camera</h2>
+        <h3>Arch Linux and derivatives (tested)</h3>
+        <pre><code>sudo pacman -S --needed v4l2loopback-dkms v4l2loopback-utils \
+    gst-plugins-good gst-plugins-bad gst-libav</code></pre>
+        <h3>Debian and Ubuntu (expected to work, not tested yet)</h3>
+        <pre><code>sudo apt install v4l2loopback-dkms v4l2loopback-utils \
+    gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-libav</code></pre>
+        <h3>Fedora (expected to work, not tested yet)</h3>
+        <p>Enable RPM Fusion, then install <code>akmod-v4l2loopback</code> together with the GStreamer good, bad-free and libav packages.</p>
+
+        <h3>Create the device</h3>
+        <p>This creates one camera named “Pocket Webcam Camera”. <code>exclusive_caps=1</code> is what lets Chrome, Firefox and other WebRTC apps list it.</p>
+        <pre><code>sudo modprobe v4l2loopback devices=1 video_nr=10 \
+    card_label="Pocket Webcam Camera" exclusive_caps=1</code></pre>
+        <p>To make it survive reboots:</p>
+        <pre><code>echo v4l2loopback | sudo tee /etc/modules-load.d/pocketwebcam.conf
+echo 'options v4l2loopback devices=1 video_nr=10 card_label="Pocket Webcam Camera" exclusive_caps=1' \
+    | sudo tee /etc/modprobe.d/pocketwebcam.conf</code></pre>
+        <p>Check that it exists:</p>
+        <pre><code>v4l2-ctl --list-devices</code></pre>
+
+        <h2 id="connect">Connect your iPhone</h2>
+        <ol>
+          <li>Open Pocket Webcam on the iPhone and on your computer, on the same Wi-Fi.</li>
+          <li>Your phone shows up in the desktop app and connects by itself.</li>
+          <li>In OBS, your browser or a call app, choose <strong>Pocket Webcam Camera</strong>.</li>
+        </ol>
+        <p>If discovery is blocked on your network, connect by address: <code>pocketwebcam --host 192.168.1.42</code>. Discovery uses mDNS (UDP 5353) and the video uses TCP port 7310. More in the <a href="/help">help page</a>.</p>
+
+        <h2 id="faq">Linux questions</h2>
+        <h3>Does it work on Wayland and X11?</h3>
+        <p>Yes. Pocket Webcam creates a V4L2 virtual camera in the kernel, so it doesn’t depend on your display server. It has been tested on Arch Linux with Hyprland (Wayland).</p>
+<h3>Do I need v4l2loopback?</h3>
+        <p>Yes. v4l2loopback is the kernel module that creates the virtual webcam your apps see. Pocket Webcam uses a single device named “Pocket Webcam Camera”.</p>
+<h3>Why doesn’t Chrome or Firefox list the camera?</h3>
+        <p>The device must be created with exclusive_caps=1. Without it, browsers and WebRTC apps can’t see it as a camera. The setup below uses that option.</p>
+<h3>Does it work with Secure Boot?</h3>
+        <p>Only if the v4l2loopback module is signed. DKMS modules are unsigned by default, so on Secure Boot systems you need to enroll a signing key (MOK) or turn Secure Boot off for the module to load.</p>
+<h3>Is video hardware-decoded?</h3>
+        <p>Where VA-API is available, the receiver uses the GPU to decode (vah264dec / vah265dec) and falls back to software decoding when it isn’t.</p>
+<h3>Is there an AUR or Flatpak package?</h3>
+        <p>Not yet. Packages for Arch (AUR) and Flatpak are planned for launch. A Flatpak will still need the v4l2loopback kernel module installed on the host.</p>
+
+        <h2 id="next">Not on Linux?</h2>
+        <p>There’s a <a href="/windows">Windows 11 preview</a>, and an Android version comes after the iPhone launch. See the <a href="/download">download page</a>, or compare Pocket Webcam with <a href="/vs/camo">Camo</a>, <a href="/vs/epoccam">EpocCam</a> and <a href="/vs/ivcam">iVCam</a>.</p>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <div class="footer-grid">
+        <span>© 2026 Pocket Webcam</span>
+        <ul class="footer-links">
+          <li><a href="/download">Download</a></li>
+          <li><a href="/linux" aria-current="page">Linux</a></li>
+          <li><a href="/windows">Windows</a></li>
+          <li><a href="/help">Help</a></li>
+          <li><a href="/donate">Donate</a></li>
+          <li><a href="/privacy">Privacy</a></li>
+          <li><a href="mailto:hello@pocketwebcam.com">hello@pocketwebcam.com</a></li>
+        </ul>
+      </div>
+      <p class="legal">iPhone is a trademark of Apple Inc., registered in the U.S. and other countries. Android is a trademark of Google LLC. Pocket Webcam is not affiliated with Apple or Google.</p>
+    </div>
+  </footer>
+</body>
+</html>

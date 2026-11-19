@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Help · Pocket Webcam</title>
+  <meta name="description" content="Fix common Pocket Webcam problems: phone not found, camera not showing up, choppy video, phone getting hot.">
+  <link rel="canonical" href="https://pocketwebcam.com/help">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Pocket Webcam">
+  <meta property="og:title" content="Help · Pocket Webcam">
+  <meta property="og:description" content="Fix common Pocket Webcam problems: phone not found, camera not showing up, choppy video, phone getting hot.">
+  <meta property="og:url" content="https://pocketwebcam.com/help">
+  <meta property="og:image" content="https://pocketwebcam.com/assets/og-image.png?v=1">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Pocket Webcam: use your iPhone as a webcam on Windows and Linux">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+  <link rel="stylesheet" href="/assets/style.css?v=2">
+  <meta name="theme-color" content="#0b0b0c">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <nav class="wrap nav" aria-label="Main">
+      <a class="brand" href="/">
+        <img src="/assets/favicon.svg" alt="" width="28" height="28">
+        Pocket Webcam
+      </a>
+      <ul class="nav-links">
+        <li><a href="/#how">How it works</a></li>
+        <li><a href="/#features">Features</a></li>
+        <li><a href="/linux">Linux</a></li>
+        <li><a href="/windows">Windows</a></li>
+        <li><a href="/help" aria-current="page">Help</a></li>
+        <li><a class="btn btn-primary btn-small" href="/download">Download</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main id="main" class="page">
+    <div class="wrap">
+      <div class="page-head">
+        <h1>Help</h1>
+        <p>Most problems come down to the network. Start at the top.</p>
+      </div>
+
+      <div class="prose">
+        <h2 id="not-found">My computer can’t find my phone</h2>
+        <ul>
+          <li><strong>Same network.</strong> Phone and computer must be on the same Wi-Fi. Guest networks, hotel and office Wi-Fi often block devices from seeing each other.</li>
+          <li><strong>Local network permission.</strong> On your iPhone: Settings → Privacy &amp; Security → Local Network → turn on Pocket Webcam.</li>
+          <li><strong>Keep the app open.</strong> Phones pause the camera and network when the app is in the background or the phone is locked.</li>
+          <li><strong>Firewall.</strong> Your computer must allow mDNS (UDP port 5353) for discovery, and outgoing connections to the phone on TCP port 7310.</li>
+          <li><strong>Connect manually.</strong> In the phone app, look for the phone’s address, for example <code>192.168.1.42:7310</code> (in Settings on iPhone, on the main screen on Android). On Linux, run:
+            <pre><code>pocketwebcam --host 192.168.1.42</code></pre>
+          </li>
+        </ul>
+
+        <h2 id="no-camera">“Pocket Webcam” doesn’t show up as a camera</h2>
+        <h3>Linux</h3>
+        <ul>
+          <li>The virtual camera needs the <code>v4l2loopback</code> kernel module. Check that <code>/dev/video10</code> exists.</li>
+          <li>Chrome and other browsers only list it with the <code>exclusive_caps=1</code> option, which the setup script enables.</li>
+          <li>Start the desktop app <em>before</em> opening your video app, or restart the video app afterwards.</li>
+        </ul>
+
+        <h2 id="mic">My phone’s microphone doesn’t show up</h2>
+        <ul>
+          <li><strong>Linux:</strong> pick <strong>Pocket Webcam Microphone</strong> as the microphone in your video app.</li>
+          <li><strong>Windows:</strong> not available yet. Windows needs a signed driver for a new microphone, and signing costs money every year. It’s the next thing donations pay for: <a href="/donate">support Pocket Webcam</a>. Until then, use your computer’s own microphone.</li>
+        </ul>
+
+        <h2 id="choppy">The video is choppy or delayed</h2>
+        <ul>
+          <li>Use 5 GHz Wi-Fi if your router has it, and keep the phone close to the router.</li>
+          <li>Lower the quality or resolution in the app. 1080p at 30 fps is plenty for video calls.</li>
+          <li>Try the HEVC codec in the app’s settings: same quality with less data.</li>
+          <li>Other heavy traffic on the network (downloads, streaming) competes with your video.</li>
+        </ul>
+
+        <h2 id="hot">My phone gets hot</h2>
+        <ul>
+          <li>4K and high frame rates take a lot of power. For calls, 1080p at 30 fps is the sweet spot.</li>
+          <li>Use the app’s dim-screen option while streaming.</li>
+          <li>Take the phone out of its case, and keep it out of direct sunlight.</li>
+          <li>The iPhone app warns you when the phone is getting too hot.</li>
+        </ul>
+
+        <h2 id="contact">Still stuck?</h2>
+        <p>Email <a href="mailto:support@pocketwebcam.com">support@pocketwebcam.com</a> with your phone model, your computer’s operating system, and what you see. We read everything.</p>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <div class="footer-grid">
+        <span>© 2026 Pocket Webcam</span>
+        <ul class="footer-links">
+          <li><a href="/download">Download</a></li>
+          <li><a href="/linux">Linux</a></li>
+          <li><a href="/windows">Windows</a></li>
+          <li><a href="/help" aria-current="page">Help</a></li>
+          <li><a href="/donate">Donate</a></li>
+          <li><a href="/privacy">Privacy</a></li>
+          <li><a href="mailto:hello@pocketwebcam.com">hello@pocketwebcam.com</a></li>
+        </ul>
+      </div>
+      <p class="legal">iPhone is a trademark of Apple Inc., registered in the U.S. and other countries. Android is a trademark of Google LLC. Pocket Webcam is not affiliated with Apple or Google.</p>
+    </div>
+  </footer>
+</body>
+</html>

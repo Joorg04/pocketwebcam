@@ -1,0 +1,47 @@
+# Maintainer: Nicolai Jørgensen <support at pocketwebcam dot com>
+pkgname=pocketwebcam-bin
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Use your iPhone as a webcam over Wi-Fi (virtual camera via v4l2loopback)"
+arch=('x86_64')
+url="https://pocketwebcam.com"
+license=('MIT' 'OFL-1.1')
+# The plugins, pactl (libpulse), EGL and xkbcommon are used at run time, so namcap can't see them.
+depends=(
+  'bash'
+  'glib2'
+  'glibc'
+  'gstreamer'
+  'gst-plugins-base'
+  'gst-plugins-base-libs'
+  'gst-plugins-good'
+  'gst-plugins-bad'
+  'gst-libav'
+  'hicolor-icon-theme'
+  'libglvnd'
+  'libpulse'
+  'libxkbcommon'
+  'V4L2LOOPBACK-MODULE'
+)
+optdepends=('v4l2loopback-utils: inspect or reconfigure the virtual camera')
+provides=('pocketwebcam')
+conflicts=('pocketwebcam')
+options=('!strip' '!debug')
+install=pocketwebcam.install
+source_x86_64=("https://downloads.pocketwebcam.com/linux/pocketwebcam-linux-$CARCH-$pkgver.tar.gz")
+sha256sums_x86_64=('9fe0715f253aaf38822dffe559ee93b67f3967c650372236aa72e9612866e3c9')
+
+package() {
+  cd "pocketwebcam-linux-$CARCH-$pkgver"
+  install -Dm755 bin/pocketwebcam-app "$pkgdir/usr/bin/pocketwebcam-app"
+  install -Dm755 bin/pocketwebcam "$pkgdir/usr/bin/pocketwebcam"
+  install -Dm644 share/pocketwebcam.desktop "$pkgdir/usr/share/applications/pocketwebcam.desktop"
+  for size in 256 512; do
+    install -Dm644 "share/pocketwebcam-$size.png" \
+      "$pkgdir/usr/share/icons/hicolor/${size}x$size/apps/pocketwebcam.png"
+  done
+  install -Dm755 setup-v4l2loopback.sh "$pkgdir/usr/share/pocketwebcam/setup-v4l2loopback.sh"
+  install -Dm644 share/modprobe.conf "$pkgdir/usr/lib/modprobe.d/pocketwebcam.conf"
+  install -Dm644 share/modules-load.conf "$pkgdir/usr/lib/modules-load.d/pocketwebcam.conf"
+  install -Dm644 -t "$pkgdir/usr/share/licenses/$pkgname" licenses/LICENSE licenses/Inter-LICENSE.txt licenses/THIRD-PARTY-NOTICES.txt
+}

@@ -1,0 +1,27 @@
+# GStreamer plugins bundled with the Windows app, one per line: the plugin's DLL name
+# (gstreamer\plugins\<name>.dll) followed by the elements the app uses from it.
+# Only these are shipped: GStreamer scans every plugin on first start, and the full
+# set (270+) took about 25 minutes on a real PC, with gstresindvd hanging outright.
+# CI checks that every element listed here loads from the trimmed folder.
+# When the receiver starts using a new element, add it here. A trailing ? marks an element
+# that only exists with a GPU (hardware decoders): CI runners have none, so it is not checked.
+
+gstcoreelements       queue tee fakesink filesrc filesink capsfilter typefind
+gstapp                appsrc appsink
+gstvideoconvertscale  videoconvert videoscale
+gstvideofilter        videoflip
+gstvideorate          videorate
+gstvideotestsrc       videotestsrc
+gstvideoparsersbad    h264parse h265parse
+gstlibav              avdec_h264 avdec_h265 avdec_aac avenc_aac
+gstd3d11              d3d11videosink d3d11h264dec? d3d11h265dec?
+gstautodetect         autovideosink
+gstpango              textoverlay
+gstdebug              taginject
+gstisomp4             mp4mux qtdemux
+gstmatroska           matroskamux matroskademux
+gstaudioparsers       aacparse
+gstaudioconvert       audioconvert
+# decodebin (video thumbnails in the captures strip) and the file-type detection it needs.
+gstplayback           decodebin
+gsttypefindfunctions

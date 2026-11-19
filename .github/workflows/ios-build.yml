@@ -1,0 +1,191 @@
+# Builds signed iOS .ipa files on a GitHub macOS runner:
+#   PocketWebcam-adhoc-ipa     -> install on registered iPhones from Linux:
+#                                 ideviceinstaller install PocketWebcam.ipa
+#   PocketWebcam-appstore-ipa  -> the App Store build
+# Run it by hand with "Upload to TestFlight" ticked to also send that build to TestFlight:
+#   gh workflow run "iOS build (signed)" -f testflight=true
+# Signing files come from repository secrets (see docs/IOS_SIGNING.md):
+#   IOS_DIST_P12, IOS_DIST_P12_PASSWORD, IOS_PROFILE_ADHOC, IOS_PROFILE_APPSTORE
+# and the upload uses an App Store Connect API key: ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8
+name: iOS build (signed)
+
+on:
+  workflow_dispatch:
+    inputs:
+      testflight:
+        description: Upload to TestFlight
+        type: boolean
+        default: false
+  push:
+    branches: [master]
+    paths:
+      - "ios/**"
+      - "protocol-fixtures/**"
+      - ".github/workflows/ios-build.yml"
+
+env:
+  TEAM_ID: 3Q86L64LTN
+  BUNDLE_ID: com.pocketwebcam.ios
+  PROFILE_ADHOC: Pocket Webcam Ad Hoc
+  PROFILE_APPSTORE: Pocket Webcam App Store
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        working-directory: ios
+        run: xcodegen generate
+
+      # The pairing rules, certificate and Keychain identity, on a simulator. Signed "to run
+      # locally" (no account needed), so the Keychain works in the tests.
+      - name: Unit tests (simulator)
+        working-directory: ios
+        shell: bash
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          print(next(d["udid"] for runtime, ds in devices.items() if "iOS" in runtime for d in ds if d["name"].startswith("iPhone")))')
+          # Each test's result and the summary; xcodebuild's own exit status decides (pipefail).
+          xcodebuild test \
+            -project PocketWebcam.xcodeproj \
+            -scheme PocketWebcam \
+            -destination "id=$UDID" \
+            CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= \
+            | { grep -E "Test Case .* (passed|failed)|Executed [0-9]+ test|error:|\*\* TEST" || true; }
+
+      - name: Install signing certificate and profiles
+        env:
+          P12_BASE64: ${{ secrets.IOS_DIST_P12 }}
+          P12_PASSWORD: ${{ secrets.IOS_DIST_P12_PASSWORD }}
+          ADHOC_BASE64: ${{ secrets.IOS_PROFILE_ADHOC }}
+          APPSTORE_BASE64: ${{ secrets.IOS_PROFILE_APPSTORE }}
+        run: |
+          KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(uuidgen)"
+          echo "$P12_BASE64" | base64 --decode > "$RUNNER_TEMP/dist.p12"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security import "$RUNNER_TEMP/dist.p12" -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" > /dev/null
+          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
+          security find-identity -v -p codesigning "$KEYCHAIN"
+          rm "$RUNNER_TEMP/dist.p12"
+
+          # Xcode 16+ reads profiles from UserData; older tools from MobileDevice.
+          for dir in "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles" \
+                     "$HOME/Library/MobileDevice/Provisioning Profiles"; do
+            mkdir -p "$dir"
+            for p in ADHOC APPSTORE; do
+              var="${p}_BASE64"
+              echo "${!var}" | base64 --decode > "$RUNNER_TEMP/$p.mobileprovision"
+              uuid=$(security cms -D -i "$RUNNER_TEMP/$p.mobileprovision" | plutil -extract UUID raw -)
+              cp "$RUNNER_TEMP/$p.mobileprovision" "$dir/$uuid.mobileprovision"
+            done
+          done
+
+      - name: Archive
+        working-directory: ios
+        run: |
+          xcodebuild \
+            -project PocketWebcam.xcodeproj \
+            -scheme PocketWebcam \
+            -configuration Release \
+            -destination "generic/platform=iOS" \
+            -archivePath "$RUNNER_TEMP/PocketWebcam.xcarchive" \
+            CODE_SIGN_STYLE=Manual \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            PROVISIONING_PROFILE_SPECIFIER="$PROFILE_APPSTORE" \
+            CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
+            archive
+
+      - name: Export .ipa files
+        run: |
+          export_ipa() {  # $1 = method, $2 = profile name, $3 = output dir
+            cat > "$RUNNER_TEMP/$1.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>$1</string>
+            <key>teamID</key><string>$TEAM_ID</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>signingCertificate</key><string>Apple Distribution</string>
+            <key>provisioningProfiles</key><dict>
+              <key>$BUNDLE_ID</key><string>$2</string>
+            </dict>
+          </dict></plist>
+          EOF
+            xcodebuild -exportArchive \
+              -archivePath "$RUNNER_TEMP/PocketWebcam.xcarchive" \
+              -exportOptionsPlist "$RUNNER_TEMP/$1.plist" \
+              -exportPath "$3"
+            mv "$3"/*.ipa "$3/PocketWebcam.ipa"
+            ls -lh "$3"
+          }
+          export_ipa release-testing "$PROFILE_ADHOC" out/adhoc
+          export_ipa app-store-connect "$PROFILE_APPSTORE" out/appstore
+
+      - name: Upload to TestFlight
+        if: ${{ inputs.testflight }}
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          KEY="$RUNNER_TEMP/AuthKey_$ASC_KEY_ID.p8"
+          echo "$ASC_KEY_P8" | base64 --decode > "$KEY"
+          cat > "$RUNNER_TEMP/upload.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>$TEAM_ID</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>signingCertificate</key><string>Apple Distribution</string>
+            <key>provisioningProfiles</key><dict>
+              <key>$BUNDLE_ID</key><string>$PROFILE_APPSTORE</string>
+            </dict>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict></plist>
+          EOF
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/PocketWebcam.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/upload.plist" \
+            -exportPath "$RUNNER_TEMP/upload" \
+            -authenticationKeyPath "$KEY" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+          rm -f "$KEY"
+          echo "Uploaded build ${{ github.run_number }} to App Store Connect. It shows up in TestFlight after Apple processes it (usually 5-30 minutes)."
+
+      - uses: actions/upload-artifact@v4
+        continue-on-error: true  # a full artifact quota shouldn't fail the build
+        with:
+          name: PocketWebcam-adhoc-ipa
+          path: out/adhoc/PocketWebcam.ipa
+          retention-days: 7
+
+      - uses: actions/upload-artifact@v4
+        continue-on-error: true  # a full artifact quota shouldn't fail the build
+        with:
+          name: PocketWebcam-appstore-ipa
+          path: out/appstore/PocketWebcam.ipa
+          retention-days: 7
+
+      - name: Remove signing keychain
+        if: always()
+        run: security delete-keychain "$RUNNER_TEMP/signing.keychain-db" || true

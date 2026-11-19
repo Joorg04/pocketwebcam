@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Pocket Webcam
+Comment=Use your phone as a webcam
+Exec=pocketwebcam-app
+Icon=pocketwebcam
+Terminal=false
+Categories=AudioVideo;Video;
+Keywords=webcam;camera;phone;iphone;android;
+StartupWMClass=com.pocketwebcam.app
