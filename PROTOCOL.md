@@ -219,7 +219,7 @@ Sent before the first frame and whenever the encoded stream changes shape. The r
 ```
 
 - `rotation`: clockwise degrees the receiver should rotate the image (`0`, `90`, `180`, `270`).
-- `mirror` (optional, default `false`): after rotating, flip the image horizontally. Phones that cannot mirror at capture time (Android) set this instead; the iPhone mirrors in the capture pipeline and leaves it `false`.
+- `mirror` (optional, default `false`): after rotating, flip the image horizontally. Phones send their Mirror setting here instead of mirroring at capture time: capture-time mirroring flips the frame before the receiver rotates it, which turns into an upside-down image for any rotation of 90 or 270 degrees.
 
 ### VIDEO_FRAME
 

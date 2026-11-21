@@ -49,6 +49,8 @@ final class AppModel: ObservableObject {
     private var micWanted = false
     /// Read on the video queue when a new stream starts, so it can't live on the main actor.
     private let rotation = Locked(0)
+    /// Like `rotation`: sent in STREAM_FORMAT, so the computer mirrors after rotating.
+    private let mirror = Locked(false)
     private var statsTimer: Timer?
 
     private enum Keys {
@@ -132,6 +134,10 @@ final class AppModel: ObservableObject {
         // Size and lens changes reach the encoder through the frames themselves;
         // codec, bitrate and fps are pushed explicitly.
         encoder.update(.init(codec: applied.codec, bitrate: applied.bitrate, fps: applied.fps))
+        if mirror.value != applied.mirror {
+            mirror.value = applied.mirror
+            encoder.restart()  // new STREAM_FORMAT carrying the new mirror flag
+        }
         sendState()
     }
 
@@ -287,6 +293,7 @@ final class AppModel: ObservableObject {
         let streaming = self.streaming
 
         let rotation = self.rotation
+        let mirror = self.mirror
 
         camera.onSampleBuffer = { sample in
             if streaming.value { encoder.encode(sample) }
@@ -325,7 +332,9 @@ final class AppModel: ObservableObject {
         // Must enqueue synchronously so STREAM_FORMAT reaches the socket before that frame.
         encoder.onFormat = { w, h in
             let s = encoder.currentSettings
-            server.sendStreamFormat(StreamFormat(codec: s.codec, width: w, height: h, fps: s.fps, rotation: rotation.value))
+            server.sendStreamFormat(StreamFormat(
+                codec: s.codec, width: w, height: h, fps: s.fps, rotation: rotation.value, mirror: mirror.value
+            ))
         }
         encoder.onFrame = { key, pts, data in
             server.sendVideo(keyframe: key, ptsMicros: pts, annexB: data)
@@ -359,6 +368,7 @@ final class AppModel: ObservableObject {
         ))
         server.send(.capabilities, json: capabilities)
         sendState()
+        mirror.value = config.mirror
         encoder.restart()  // the next frame starts a fresh stream with a STREAM_FORMAT
         streaming.value = true
         UIApplication.shared.isIdleTimerDisabled = true

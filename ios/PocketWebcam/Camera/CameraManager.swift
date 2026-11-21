@@ -277,9 +277,11 @@ final class CameraManager: NSObject, @unchecked Sendable {
             } else {
                 config.stabilization = false
             }
+            // Mirroring here would flip the still-sideways frame, which comes out upside
+            // down once the computer rotates it. The computer mirrors instead (STREAM_FORMAT).
             if connection.isVideoMirroringSupported {
                 connection.automaticallyAdjustsVideoMirroring = false
-                connection.isVideoMirrored = config.mirror
+                connection.isVideoMirrored = false
             }
         }
         session.commitConfiguration()

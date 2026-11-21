@@ -222,6 +222,9 @@ struct StreamFormat: Codable, Equatable {
     var height: Int
     var fps: Int
     var rotation: Int
+    /// Flip horizontally after rotating. The phone can't mirror at capture: its frames
+    /// are still sideways there, so a mirror would turn into upside down once rotated.
+    var mirror = false
 }
 
 /// AUDIO_FORMAT: shape of the AUDIO_FRAME samples that follow.
