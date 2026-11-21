@@ -55,9 +55,19 @@
           <li><strong>Local network permission.</strong> On your iPhone: Settings → Privacy &amp; Security → Local Network → turn on Pocket Webcam.</li>
           <li><strong>Keep the app open.</strong> Phones pause the camera and network when the app is in the background or the phone is locked.</li>
           <li><strong>Firewall.</strong> Your computer must allow mDNS (UDP port 5353) for discovery, and outgoing connections to the phone on TCP port 7310.</li>
-          <li><strong>Connect manually.</strong> In the phone app, look for the phone’s address, for example <code>192.168.1.42:7310</code> (in Settings on iPhone, on the main screen on Android). On Linux, run:
+          <li><strong>Connect manually</strong> (once the phone is paired). In the phone app, look for the phone’s address, for example <code>192.168.1.42:7310</code> (in Settings on iPhone, on the main screen on Android). On Linux, run:
             <pre><code>pocketwebcam --host 192.168.1.42</code></pre>
           </li>
+        </ul>
+
+        <h2 id="pairing">Pairing doesn’t work</h2>
+        <p>Your phone and computer pair once. After that, only paired devices can connect, and everything between them is encrypted.</p>
+        <ul>
+          <li><strong>How to pair.</strong> Open Pocket Webcam on both, on the same Wi-Fi. The desktop app shows a QR code (or choose <strong>Pair a phone</strong>). On the iPhone, tap <strong>Pair with a computer</strong> and scan it.</li>
+          <li><strong>Can’t scan?</strong> Tap <strong>Can’t scan? Pair with a code instead</strong>. Both screens show a 6-digit code: pair only if they match. If they don’t, cancel, because something else answered.</li>
+          <li><strong>It used to connect, now it doesn’t.</strong> If you reinstalled either app or chose Forget, the pairing is gone on that side. Pair again.</li>
+          <li><strong>The desktop app can’t pair with an old phone app.</strong> Pairing needs Pocket Webcam 0.2.0 or later on both. Update the phone app in TestFlight and the desktop app from the <a href="/download">download page</a>.</li>
+          <li><strong>Remove a pairing.</strong> iPhone: Settings → Paired computers. Desktop app: Settings → Paired phones → Forget.</li>
         </ul>
 
         <h2 id="no-camera">“Pocket Webcam” doesn’t show up as a camera</h2>
