@@ -67,7 +67,7 @@
       "name": "Why doesn’t Chrome or Firefox list the camera?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "The device must be created with exclusive_caps=1. Without it, browsers and WebRTC apps can’t see it as a camera. The setup below uses that option."
+        "text": "The device must be created with exclusive_caps=1. Without it, browsers and WebRTC apps can’t see it as a camera. The setup above uses that option."
       }
     },
     {
@@ -160,7 +160,8 @@
         <pre><code>tar xf pocketwebcam-linux-x86_64-0.2.0.tar.gz
 cd pocketwebcam-linux-x86_64-0.2.0
 ./install.sh</code></pre>
-        <p>On first install the kernel module is usually built in the background, so the camera may only appear after a restart.</p>
+        <p>Run <code>./install.sh</code> as your normal user, not with <code>sudo</code>: it asks for your password when it needs it.</p>
+        <p>After installing, open <strong>Pocket Webcam</strong> from your app launcher. With the .deb or .rpm, the kernel module is often built in the background on first install, so the camera may only appear after a restart.</p>
         <p>To check that a download is complete and unchanged, compare <code>sha256sum &lt;file&gt;</code> with <a href="https://downloads.pocketwebcam.com/linux/SHA256SUMS-0.2.0">the published checksums</a>.</p>
 
         <h2 id="setup">Set up the virtual camera by hand</h2>
@@ -187,11 +188,11 @@ echo 'options v4l2loopback devices=1 video_nr=10 card_label="Pocket Webcam Camer
 
         <h2 id="connect">Connect your iPhone</h2>
         <ol>
-          <li>Open Pocket Webcam on the iPhone and on your computer, on the same Wi-Fi.</li>
+          <li>Open Pocket Webcam on the iPhone and on your computer (from the app launcher), on the same Wi-Fi.</li>
           <li>The first time, pair them: the desktop app shows a QR code. On the iPhone, tap <strong>Pair with a computer</strong> and scan it (or pair with a 6-digit code instead). After that they connect by themselves.</li>
           <li>In OBS, your browser or a call app, choose <strong>Pocket Webcam Camera</strong>.</li>
         </ol>
-        <p>If discovery is blocked on your network, connect by address: <code>pocketwebcam --host 192.168.1.42</code>. Discovery uses mDNS (UDP 5353) and the video uses TCP port 7310. More in the <a href="/help">help page</a>.</p>
+        <p>If discovery is blocked on your network, connect by address once the phone is paired: <code>pocketwebcam --host 192.168.1.42</code>. Discovery uses mDNS (UDP 5353) and the video uses TCP port 7310. More in the <a href="/help">help page</a>.</p>
 
         <h2 id="faq">Linux questions</h2>
         <h3>Does it work on Wayland and X11?</h3>
@@ -199,7 +200,7 @@ echo 'options v4l2loopback devices=1 video_nr=10 card_label="Pocket Webcam Camer
 <h3>Do I need v4l2loopback?</h3>
         <p>Yes. v4l2loopback is the kernel module that creates the virtual webcam your apps see. Pocket Webcam uses a single device named “Pocket Webcam Camera”.</p>
 <h3>Why doesn’t Chrome or Firefox list the camera?</h3>
-        <p>The device must be created with exclusive_caps=1. Without it, browsers and WebRTC apps can’t see it as a camera. The setup below uses that option.</p>
+        <p>The device must be created with exclusive_caps=1. Without it, browsers and WebRTC apps can’t see it as a camera. The setup above uses that option.</p>
 <h3>Does it work with Secure Boot?</h3>
         <p>Only if the v4l2loopback module is signed. DKMS modules are unsigned by default, so on Secure Boot systems you need to enroll a signing key (MOK) or turn Secure Boot off for the module to load.</p>
 <h3>Is video hardware-decoded?</h3>
