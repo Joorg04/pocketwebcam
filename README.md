@@ -182,6 +182,7 @@ milestones; `git checkout v0.1.0` (then `git switch master`) visits an old one.
 | v0.0.2 | Desktop app: preview, phone controls, tray, first-run guide |
 | v0.0.3 | Android app tested on a real phone; signup, SEO, iOS CI build |
 | v0.1.0 | All apps on one version number (0.1.0) |
+| v0.2.0 | Pairing (TLS 1.3, QR or 6-digit code) on all apps; first public Linux and Windows downloads |
 
 ## License
 

@@ -5,7 +5,7 @@ default-members = ["."]
 
 [package]
 name = "pocketwebcam-receiver"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "Desktop receiver for Pocket Webcam: turns a phone camera into a virtual webcam"
 license = "MIT"

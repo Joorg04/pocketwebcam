@@ -13,8 +13,8 @@ android {
         // 29 (Android 10): the first with TLS 1.3, which protocol v2 requires.
         minSdk = 29
         targetSdk = 36
-        versionCode = 2
-        versionName = "0.1.0"
+        versionCode = 3
+        versionName = "0.2.0"
     }
 
     // Upload key for Google Play. Path and passwords live in ~/.gradle/gradle.properties

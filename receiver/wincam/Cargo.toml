@@ -1,6 +1,6 @@
 [package]
 name = "pocketwebcam-camera"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "Windows 11 virtual camera for Pocket Webcam: a Media Foundation media source that shows the app's video"
 license = "MIT"
