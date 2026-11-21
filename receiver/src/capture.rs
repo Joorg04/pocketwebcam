@@ -464,6 +464,14 @@ mod tests {
         n
     }
 
+    /// Frames in an MP4 recording of `sent` frames. GStreamer 1.20's mp4mux (Ubuntu 22.04,
+    /// the Linux release build) drops the very last frame, so one missing at the end is
+    /// accepted there; MKV is still checked exactly.
+    fn assert_mp4_frames(path: &Path, sent: usize) {
+        let n = frames_in(path, "qtdemux");
+        assert!(n == sent || (n + 1 == sent && gst::version() < (1, 22, 0, 0)), "Mp4: {n} of {sent} frames");
+    }
+
     fn format() -> StreamFormat {
         StreamFormat { codec: "h264".into(), width: 320, height: 240, fps: 30, rotation: 90, mirror: false }
     }
@@ -501,7 +509,10 @@ mod tests {
         for (container, demux) in [(Container::Mp4, "qtdemux"), (Container::Mkv, "matroskademux")] {
             let (path, saved) = record("play", container, &frames, 3);
             assert_eq!(saved, vec![path.clone()]);
-            assert_eq!(frames_in(&path, demux), 30, "{container:?}");
+            match container {
+                Container::Mp4 => assert_mp4_frames(&path, 30),
+                Container::Mkv => assert_eq!(frames_in(&path, demux), 30, "{container:?}"),
+            }
             if let Ok(keep) = std::env::var("PW_KEEP_RECORDING") {
                 let _ = std::fs::copy(&path, format!("{keep}.{}", container.extension()));
             }
@@ -565,7 +576,7 @@ mod tests {
         }
         recorder.stop();
         assert_eq!(wait_saved(&recorder), vec![path.clone()]);
-        assert_eq!(frames_in(&path, "qtdemux"), 60);
+        assert_mp4_frames(&path, 60);
         let (seconds, loud) = audio_in(&path);
         assert!((seconds - 2.0).abs() < 0.1, "sound track is {seconds:.2} s long");
         assert!((loud - 0.5).abs() < 0.1, "{loud:.2} s of tone");
