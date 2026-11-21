@@ -99,6 +99,10 @@ jobs:
       - name: Archive
         working-directory: ios
         run: |
+          # Builds 1-18 of 0.1.0 came from the old repo, whose run counter we can't
+          # continue, so add an offset to keep build numbers rising.
+          BUILD_NUMBER=$((GITHUB_RUN_NUMBER + 100))
+          echo "BUILD_NUMBER=$BUILD_NUMBER" >> "$GITHUB_ENV"
           xcodebuild \
             -project PocketWebcam.xcodeproj \
             -scheme PocketWebcam \
@@ -109,7 +113,7 @@ jobs:
             DEVELOPMENT_TEAM="$TEAM_ID" \
             CODE_SIGN_IDENTITY="Apple Distribution" \
             PROVISIONING_PROFILE_SPECIFIER="$PROFILE_APPSTORE" \
-            CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
+            CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
             archive
 
       - name: Export .ipa files
@@ -170,7 +174,7 @@ jobs:
             -authenticationKeyID "$ASC_KEY_ID" \
             -authenticationKeyIssuerID "$ASC_ISSUER_ID"
           rm -f "$KEY"
-          echo "Uploaded build ${{ github.run_number }} to App Store Connect. It shows up in TestFlight after Apple processes it (usually 5-30 minutes)."
+          echo "Uploaded build $BUILD_NUMBER to App Store Connect. It shows up in TestFlight after Apple processes it (usually 5-30 minutes)."
 
       - uses: actions/upload-artifact@v4
         continue-on-error: true  # a full artifact quota shouldn't fail the build
