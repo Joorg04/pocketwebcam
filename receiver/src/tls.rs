@@ -147,7 +147,7 @@ impl Link {
             .ok_or_else(|| anyhow!("the phone sent no certificate"))?;
         let peer = Fingerprint::of(cert);
         let link = Arc::new(Link { conn: Mutex::new(conn), sock: sock.try_clone()?, peer });
-        let reader = LinkReader { link: link.clone(), sock, raw: vec![0; 16 * 1024] };
+        let reader = LinkReader { link: link.clone(), sock, raw: vec![0; 16 * 1024], pending: 0, filled: 0 };
         Ok((link, reader))
     }
 
@@ -200,6 +200,9 @@ pub struct LinkReader {
     link: Arc<Link>,
     sock: TcpStream,
     raw: Vec<u8>,
+    /// `raw[pending..filled]` came off the network but isn't handed to rustls yet.
+    pending: usize,
+    filled: usize,
 }
 
 impl Read for LinkReader {
@@ -213,21 +216,26 @@ impl Read for LinkReader {
                     Err(e) => return Err(e),
                 }
             }
-            // Nothing decrypted is waiting: read more from the network. The buffer is no
-            // bigger than rustls' plaintext limit, so the plaintext always fits.
-            let n = self.sock.read(&mut self.raw)?;
+            // Nothing decrypted is waiting, so rustls can take more. Hand it one piece and
+            // go back to reading the plaintext out: if it got more before the plaintext was
+            // read, it would stop with "received plaintext buffer full". (A piece can finish
+            // a record that was half there, so one network read can decrypt to more than
+            // rustls holds.)
+            if self.pending == self.filled {
+                let n = self.sock.read(&mut self.raw)?;
+                if n == 0 {
+                    // Lets rustls tell a clean close_notify from a cut connection.
+                    let mut conn = self.link.conn.lock().unwrap();
+                    conn.read_tls(&mut io::empty())?;
+                    conn.process_new_packets().map_err(io::Error::other)?;
+                    continue;
+                }
+                (self.pending, self.filled) = (0, n);
+            }
             let mut conn = self.link.conn.lock().unwrap();
-            if n == 0 {
-                // Lets rustls tell a clean close_notify from a cut connection.
-                conn.read_tls(&mut io::empty())?;
-                conn.process_new_packets().map_err(io::Error::other)?;
-                continue;
-            }
-            let mut data = &self.raw[..n];
-            while !data.is_empty() {
-                conn.read_tls(&mut data)?;
-                conn.process_new_packets().map_err(io::Error::other)?;
-            }
+            let mut data = &self.raw[self.pending..self.filled];
+            self.pending += conn.read_tls(&mut data)?;
+            conn.process_new_packets().map_err(io::Error::other)?;
             // Key updates and alerts need an answer.
             while conn.wants_write() {
                 conn.write_tls(&mut &self.sock)?;
@@ -326,6 +334,36 @@ mod tests {
         let pong = read_message(&mut reader).unwrap();
         assert_eq!((pong.kind, pong.payload.as_slice()), (PONG, b"{\"t\":1}".as_slice()));
         assert_eq!(server.join().unwrap(), desktop.fingerprint);
+    }
+
+    #[test]
+    fn many_small_records_are_read_without_overfilling_rustls() {
+        // The iPhone sends lots of records of different sizes. A network read that
+        // finishes a half-received record then decrypts to more than rustls' 16 KB limit,
+        // which once dropped the connection with "received plaintext buffer full".
+        let (desktop, _) = Identity::generate().unwrap();
+        let (phone, _) = Identity::generate().unwrap();
+        let data: Vec<u8> = (0..4_000_000u32).map(|i| (i % 253) as u8).collect();
+        let sent = data.clone();
+        let (addr, server) = test_phone::spawn(phone, move |mut a| {
+            let (mut at, mut size) = (0, 0usize);
+            while at < sent.len() {
+                size = (size * 7 + 1_500) % 15_000 + 100; // 100..15_100 bytes, mixed
+                let end = (at + size).min(sent.len());
+                a.stream.write_all(&sent[at..end]).unwrap(); // one record per write
+                at = end;
+            }
+            a.stream.flush().unwrap();
+        });
+
+        let sock = TcpStream::connect(addr).unwrap();
+        let (_link, mut reader) = Link::handshake(sock, client_config(&desktop).unwrap()).unwrap();
+        // Let the phone get far ahead so each socket read is a full buffer.
+        std::thread::sleep(std::time::Duration::from_millis(200));
+        let mut got = vec![0; data.len()];
+        reader.read_exact(&mut got).unwrap();
+        assert!(got == data);
+        server.join().unwrap();
     }
 
     #[test]
