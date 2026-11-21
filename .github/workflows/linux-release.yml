@@ -32,7 +32,9 @@ jobs:
         run: |
           apt-get update
           apt-get install -y --no-install-recommends ca-certificates curl git build-essential pkg-config \
-            binutils file rpm shellcheck libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
+            binutils file rpm shellcheck libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+            gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad \
+            gstreamer1.0-plugins-ugly gstreamer1.0-libav  # the recording tests encode and play back video
 
       - uses: actions/checkout@v4
 

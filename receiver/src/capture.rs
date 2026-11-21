@@ -421,9 +421,15 @@ mod tests {
     /// Encodes `n` frames of test video into H.264 access units: (keyframe, data).
     fn encoded_frames(n: u32) -> Vec<(bool, Vec<u8>)> {
         gst::init().unwrap();
+        // Ubuntu 22.04 (the Linux release build) has no openh264enc, so fall back to x264.
+        let encoder = if gst::ElementFactory::find("openh264enc").is_some() {
+            "openh264enc gop-size=10"
+        } else {
+            "x264enc key-int-max=10 bframes=0 tune=zerolatency"
+        };
         let pipeline = gst::parse::launch(&format!(
             "videotestsrc num-buffers={n} ! video/x-raw,width=320,height=240,framerate=30/1 \
-             ! openh264enc gop-size=10 ! h264parse config-interval=-1 \
+             ! {encoder} ! h264parse config-interval=-1 \
              ! video/x-h264,stream-format=byte-stream,alignment=au ! appsink name=out sync=false"
         ))
         .unwrap()
