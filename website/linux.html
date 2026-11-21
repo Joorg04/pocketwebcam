@@ -27,8 +27,8 @@
   "step": [
     {
       "@type": "HowToStep",
-      "name": "Install the virtual camera module",
-      "text": "Install v4l2loopback and GStreamer plugins, then create the Pocket Webcam Camera device with exclusive_caps=1."
+      "name": "Install Pocket Webcam",
+      "text": "Install the .deb (Ubuntu, Debian), .rpm (Fedora) or tarball (Arch and others). It brings the v4l2loopback virtual camera module and the GStreamer plugins."
     },
     {
       "@type": "HowToStep",
@@ -91,7 +91,7 @@
       "name": "Is there an AUR or Flatpak package?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Not yet. Packages for Arch (AUR) and Flatpak are planned for launch. A Flatpak will still need the v4l2loopback kernel module installed on the host."
+        "text": "An AUR package (pocketwebcam-bin) is coming; until then, Arch users can use the tarball. A Flatpak isn’t planned: it can’t install the v4l2loopback kernel module the virtual camera needs, which is the hard part of the setup."
       }
     }
   ]
@@ -126,9 +126,8 @@
 
       <div class="prose">
         <div class="note">
-          <strong>Status: in development.</strong> The Linux receiver and the virtual camera work today, tested on Arch Linux with Hyprland.
-          The iPhone app is in beta on TestFlight, and there’s no public Linux download yet.
-          <a href="https://a5cf18de.sibforms.com/serve/MUIFACfRyj2vaDYHV6QjQxAFLVGsnYRZt6BZG5gQFn3MzESW96ZbPanN-FemtnLjsO1nE269SgcIVhveI-wAOhNapaHTtwfVelYA3GJ3zzVdliwTghBJ6Em7ChFukjr2M3U4tcXDVHComMFVcsGTZqnMx27udqN9qcy-cbHYE596_2I4xhN8aulPjZ9oSjZkxdrTvkXet_U9s26GAA==">Join the launch list</a> for a beta invite.
+          <strong>Status: preview.</strong> The Linux app and the virtual camera are tested on Arch Linux with Hyprland.
+          The Ubuntu, Debian and Fedora packages are new and haven’t been tested on those systems yet. The iPhone app is in beta on TestFlight.
         </div>
 
         <h2 id="how">How it works</h2>
@@ -145,7 +144,27 @@
           <li>The <code>v4l2loopback</code> kernel module and the GStreamer plugins</li>
         </ul>
 
-        <h2 id="setup">Set up the virtual camera</h2>
+        <h2 id="install">Install</h2>
+        <p>Each package installs the app, the virtual camera module (v4l2loopback) and the GStreamer plugins it needs, and sets the camera up to load at every start.</p>
+        <h3>Ubuntu, Debian, Linux Mint, Pop!_OS (not tested yet)</h3>
+        <p><a class="btn btn-primary btn-small" href="https://downloads.pocketwebcam.com/linux/pocketwebcam_0.2.0_amd64.deb">Download the .deb (20 MB)</a></p>
+        <pre><code>sudo apt install ./pocketwebcam_0.2.0_amd64.deb</code></pre>
+        <p>With Secure Boot on, the install asks you to set a password for the kernel module. Restart and choose <strong>Enroll MOK</strong> with that password.</p>
+        <h3>Fedora (not tested yet)</h3>
+        <p>Enable <a href="https://rpmfusion.org/Configuration">RPM Fusion</a> (free and nonfree) first.</p>
+        <p><a class="btn btn-primary btn-small" href="https://downloads.pocketwebcam.com/linux/pocketwebcam-0.2.0-1.x86_64.rpm">Download the .rpm (29 MB)</a></p>
+        <pre><code>sudo dnf install ./pocketwebcam-0.2.0-1.x86_64.rpm</code></pre>
+        <h3>Arch Linux and other distros</h3>
+        <p>A tarball with an install script that uses apt, pacman or dnf, and installs the app in your home folder. The app itself is tested on Arch; this installer is new.</p>
+        <p><a class="btn btn-primary btn-small" href="https://downloads.pocketwebcam.com/linux/pocketwebcam-linux-x86_64-0.2.0.tar.gz">Download the .tar.gz (29 MB)</a></p>
+        <pre><code>tar xf pocketwebcam-linux-x86_64-0.2.0.tar.gz
+cd pocketwebcam-linux-x86_64-0.2.0
+./install.sh</code></pre>
+        <p>On first install the kernel module is usually built in the background, so the camera may only appear after a restart.</p>
+        <p>To check that a download is complete and unchanged, compare <code>sha256sum &lt;file&gt;</code> with <a href="https://downloads.pocketwebcam.com/linux/SHA256SUMS-0.2.0">the published checksums</a>.</p>
+
+        <h2 id="setup">Set up the virtual camera by hand</h2>
+        <p>Only needed if you don’t use one of the downloads above, or the camera doesn’t show up after installing.</p>
         <h3>Arch Linux and derivatives (tested)</h3>
         <pre><code>sudo pacman -S --needed v4l2loopback-dkms v4l2loopback-utils \
     gst-plugins-good gst-plugins-bad gst-libav</code></pre>
@@ -169,7 +188,7 @@ echo 'options v4l2loopback devices=1 video_nr=10 card_label="Pocket Webcam Camer
         <h2 id="connect">Connect your iPhone</h2>
         <ol>
           <li>Open Pocket Webcam on the iPhone and on your computer, on the same Wi-Fi.</li>
-          <li>Your phone shows up in the desktop app and connects by itself.</li>
+          <li>The first time, pair them: the desktop app shows a QR code. On the iPhone, tap <strong>Pair with a computer</strong> and scan it (or pair with a 6-digit code instead). After that they connect by themselves.</li>
           <li>In OBS, your browser or a call app, choose <strong>Pocket Webcam Camera</strong>.</li>
         </ol>
         <p>If discovery is blocked on your network, connect by address: <code>pocketwebcam --host 192.168.1.42</code>. Discovery uses mDNS (UDP 5353) and the video uses TCP port 7310. More in the <a href="/help">help page</a>.</p>
@@ -186,7 +205,7 @@ echo 'options v4l2loopback devices=1 video_nr=10 card_label="Pocket Webcam Camer
 <h3>Is video hardware-decoded?</h3>
         <p>Where VA-API is available, the receiver uses the GPU to decode (vah264dec / vah265dec) and falls back to software decoding when it isn’t.</p>
 <h3>Is there an AUR or Flatpak package?</h3>
-        <p>Not yet. Packages for Arch (AUR) and Flatpak are planned for launch. A Flatpak will still need the v4l2loopback kernel module installed on the host.</p>
+        <p>An AUR package (<code>pocketwebcam-bin</code>) is coming; until then, Arch users can use the tarball above. A Flatpak isn’t planned: it can’t install the v4l2loopback kernel module the virtual camera needs, which is the hard part of the setup.</p>
 
         <h2 id="next">Not on Linux?</h2>
         <p>There’s a <a href="/windows">Windows 11 preview</a>, and an Android version comes after the iPhone launch. See the <a href="/download">download page</a>, or compare Pocket Webcam with <a href="/vs/camo">Camo</a>, <a href="/vs/epoccam">EpocCam</a> and <a href="/vs/ivcam">iVCam</a>.</p>

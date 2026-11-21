@@ -146,20 +146,20 @@
         </ul>
 
         <h2 id="install">Install</h2>
-        <p><a class="btn btn-primary" href="https://downloads.pocketwebcam.com/windows/PocketWebcam-Setup-0.1.0.exe">Download for Windows 11 (47 MB)</a></p>
+        <p><a class="btn btn-primary" href="https://downloads.pocketwebcam.com/windows/PocketWebcam-Setup-0.2.0.exe">Download for Windows 11 (33 MB)</a></p>
         <ol>
-          <li>Run <code>PocketWebcam-Setup-0.1.0.exe</code>. Windows may say “Windows protected your PC” because the preview isn’t signed yet: choose <strong>More info</strong>, then <strong>Run anyway</strong>.</li>
+          <li>Run <code>PocketWebcam-Setup-0.2.0.exe</code>. Windows may say “Windows protected your PC” because the preview isn’t signed yet: choose <strong>More info</strong>, then <strong>Run anyway</strong>.</li>
           <li>Allow the administrator prompt. Setup needs it once, to install the virtual camera and a firewall rule that lets the app find your phone on private networks.</li>
           <li>Open Pocket Webcam from the Start menu.</li>
         </ol>
         <p>To check that the download is complete and unchanged, run this in PowerShell in your Downloads folder. It should print the SHA-256 below.</p>
-        <pre><code>Get-FileHash .\PocketWebcam-Setup-0.1.0.exe</code></pre>
-        <pre><code>0BEE4A32F992F9193745CA66BB99211A2050F26DFF7AE02082FB10008C6D82C9</code></pre>
+        <pre><code>Get-FileHash .\PocketWebcam-Setup-0.2.0.exe</code></pre>
+        <pre><code>9C37CDFE629BAA96F3D9CF5F601886B57BC050AC7D7DBBDE7F31FD7CBE6DEF76</code></pre>
 
         <h2 id="connect">Connect your iPhone</h2>
         <ol>
           <li>Open Pocket Webcam on the iPhone, on the same Wi-Fi as your PC.</li>
-          <li>Your phone shows up in the desktop app and connects by itself.</li>
+          <li>The first time, pair them: the desktop app shows a QR code. On the iPhone, tap <strong>Pair with a computer</strong> and scan it (or pair with a 6-digit code instead). After that they connect by themselves.</li>
           <li>Press <strong>Start virtual camera</strong>, then choose <strong>Pocket Webcam (Windows Virtual Camera)</strong> in your call, streaming or browser app.</li>
         </ol>
         <p>Discovery uses mDNS (UDP 5353) and the video uses TCP port 7310. If your phone doesn’t show up, see the questions below and the <a href="/help">help page</a>.</p>
